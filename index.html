@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PC Salon 3D - Setup Immersif</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #020205;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewport="0 0 24 24" style="fill:black;stroke:white;stroke-width:1px;"><circle cx="12" cy="12" r="6" fill="%2300ff88"/><line x1="12" y1="2" x2="12" y2="22" stroke="white" stroke-width="2"/><line x1="2" y1="12" x2="22" y2="12" stroke="white" stroke-width="2"/></svg>') 12 12, auto;
+        }
+
+        #bottom-notification {
+            position: fixed;
+            bottom: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20, 20, 30, 0.95);
+            color: #00ff88;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid #00ff88;
+            font-size: 0.9rem;
+            font-weight: bold;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.8);
+            z-index: 1000;
+            transition: bottom 0.4s ease-in-out;
+            pointer-events: none;
+            text-shadow: 0 0 8px rgba(0,255,136,0.5);
+        }
+        #bottom-notification.show {
+            bottom: 25px;
+        }
+
+        #screen-ui {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            background: #2b579a;
+            color: #ffffff;
+            box-sizing: border-box;
+            overflow: hidden;
+            z-index: 5;
+            pointer-events: auto;
+            background-image: radial-gradient(circle at center, #3c78d8 0%, #1a3c70 100%);
+        }
+
+        #screen-ui::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
+            background-size: 100% 3px;
+            z-index: 20;
+            pointer-events: none;
+            opacity: 0.3;
+        }
+
+        .win-desktop {
+            flex: 1;
+            position: relative;
+            padding: 15px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+            grid-auto-rows: 75px;
+            gap: 10px;
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        .desktop-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 6px;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: background 0.1s;
+            text-align: center;
+        }
+
+        .desktop-icon:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+        }
+
+        .desktop-icon .ico {
+            font-size: 24px;
+            margin-bottom: 4px;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));
+        }
+
+        .desktop-icon span {
+            font-size: 0.6rem;
+            color: #ffffff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+            word-break: break-all;
+            line-height: 1.1;
+        }
+
+        .win-taskbar {
+            height: 32px;
+            background: rgba(20, 20, 25, 0.92);
+            border-top: 1px solid rgba(255,255,255,0.15);
+            display: flex;
+            align-items: center;
+            padding: 0 6px;
+            z-index: 15;
+            box-sizing: border-box;
+        }
+
+        .start-orb {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #0078d7, #002050);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+
+        .taskbar-apps {
+            display: flex;
+            gap: 4px;
+            margin-left: 8px;
+            flex: 1;
+        }
+
+        .task-item {
+            background: rgba(255,255,255,0.1);
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.6rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .task-item:hover { background: rgba(255,255,255,0.2); }
+
+        .task-clock {
+            font-size: 0.6rem;
+            color: #ddd;
+            padding: 0 6px;
+        }
+
+        .modal-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .win-window {
+            background: #f0f0f0;
+            color: #111;
+            width: 80%;
+            height: 75%;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.6);
+            border: 1px solid #707070;
+            overflow: hidden;
+        }
+
+        .win-window-header {
+            background: linear-gradient(to bottom, #ffffff, #e1e1e1);
+            padding: 6px 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.7rem;
+            font-weight: bold;
+            border-bottom: 1px solid #adadad;
+        }
+
+        .win-close-btn {
+            background: #e81123;
+            border: none;
+            color: white;
+            width: 18px; height: 18px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.6rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .win-close-btn:hover { background: #f1707a; }
+
+        .win-window-body {
+            flex: 1;
+            background: #fff;
+            color: #000;
+            padding: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.7rem;
+            resize: none;
+            border: none;
+            outline: none;
+            overflow-y: auto;
+        }
+
+        .img-view-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #111;
+            padding: 8px;
+            overflow: hidden;
+        }
+
+        .img-view-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="bottom-notification">Indice : Utilisez la combinaison secrète sur le clavier...</div>
+
+    <div id="screen-ui">
+        <div class="win-desktop" id="desktop-grid"></div>
+        <div class="win-taskbar">
+            <div class="start-orb" onclick="openStartMenu()">⊞</div>
+            <div class="taskbar-apps">
+                <div class="task-item"><span>📁</span> Explorateur</div>
+            </div>
+            <div class="task-clock" id="sys-clock">19:00</div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        document.addEventListener('keydown', event => {
+            if (
+                event.key === 'F12' ||
+                (event.ctrlKey && event.shiftKey && (event.key === 'I' || event.key === 'C' || event.key === 'J')) ||
+                (event.ctrlKey && event.key === 'U')
+            ) {
+                event.preventDefault();
+                return false;
+            }
+        });
+
+        const _mX = (s) => s.split('').map(c => String.fromCharCode(c.charCodeAt(0) ^ 5)).join('');
+        const _EncryptedConfig = {
+            n: _mX("jttwzxi~wjwji%iny%fxy"),
+            u: _mX("mxxpt4--mfrygfnoeq7669;8-snymjxi-gjxyi%Iwjfsr4")
+        };
+        const decodeStr = (encoded) => {
+            let res = "";
+            for(let i=0; i<encoded.length; i++) {
+                res += String.fromCharCode(encoded.charCodeAt(i) ^ 5);
+            }
+            return res;
+        };
+
+        const fileDatabase = [];
+        const extensions = ['.txt', '.log', '.cfg', '.dat', '.bak', '.tmp', '.sys', '.doc'];
+        const iconTypes = ['📄', '📊', '⚙️', '🗄️', '🔒', '📦'];
+
+        fileDatabase.push({ name: 'elbg1.jpg', type: 'image', icon: '🖼️' });
+        fileDatabase.push({ name: 'elbg2.jpg', type: 'image', icon: '🖼️' });
+        fileDatabase.push({ name: 'elbg3.jpg', type: 'image', icon: '🖼️' });
+        fileDatabase.push({ name: 'elbg4.jpg', type: 'image', icon: '🖼️' });
+
+        for (let i = 1; i <= 1500; i++) {
+            const ext = extensions[i % extensions.length];
+            const ico = iconTypes[i % iconTypes.length];
+            const randHex = Math.random().toString(36).substring(2, 8);
+            
+            fileDatabase.push({
+                name: `data_${i}_${randHex}${ext}`,
+                type: 'document',
+                icon: ico,
+                content: `Secteur mémoriel chiffré ID-${i}\nChecksum: 0x${Math.floor(Math.random()*16777215).toString(16)}\nFlux de données stable sans anomalie signalée.\nRegistre interne validé.`
+            });
+        }
+
+        let filterActive = false;
+
+        function renderDesktop() {
+            const grid = document.getElementById('desktop-grid');
+            grid.innerHTML = '';
+            
+            const filesToDisplay = [...fileDatabase];
+            if (filterActive) {
+                filesToDisplay.push({
+                    name: decodeStr(_EncryptedConfig.n),
+                    type: 'link',
+                    icon: '🌐',
+                    url: decodeStr(_EncryptedConfig.u)
+                });
+            }
+
+            filesToDisplay.forEach((file) => {
+                const tile = document.createElement('div');
+                tile.className = 'desktop-icon';
+                tile.innerHTML = `
+                    <div class="ico">${file.icon}</div>
+                    <span>${file.name}</span>
+                `;
+                if (file.type === 'image') {
+                    tile.onclick = () => openImageViewer(file.name);
+                } else if (file.type === 'link') {
+                    tile.onclick = () => { window.location.href = file.url; };
+                } else {
+                    tile.onclick = () => openNotepad(file.name, file.content);
+                }
+                grid.appendChild(tile);
+            });
+        }
+
+        const activeKeys = {};
+        const targetKeys = ['z', 'i', 'p', 'x', 'v', 'n', 'h'];
+
+        window.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            activeKeys[key] = true;
+
+            const allPressed = targetKeys.every(k => activeKeys[k]);
+            if (allPressed && !filterActive) {
+                filterActive = true;
+                renderDesktop();
+                showNotification("Accès autorisé : Le fichier corrompu a été déverrouillé sur le bureau.");
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            activeKeys[key] = false;
+        });
+
+        function showNotification(text) {
+            const notif = document.getElementById('bottom-notification');
+            notif.innerText = text;
+            notif.classList.add('show');
+            setTimeout(() => {
+                notif.classList.remove('show');
+            }, 4000);
+        }
+
+        function openNotepad(title, textContent) {
+            const screenUI = document.getElementById('screen-ui');
+            const existingModal = document.getElementById('modal-box');
+            if (existingModal) existingModal.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'modal-box';
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="win-window">
+                    <div class="win-window-header">
+                        <span>Bloc-notes - ${title}</span>
+                        <button class="win-close-btn" onclick="document.getElementById('modal-box').remove()">✕</button>
+                    </div>
+                    <textarea class="win-window-body" readonly>${textContent}</textarea>
+                </div>
+            `;
+            screenUI.appendChild(modal);
+        }
+
+        function openImageViewer(imageName) {
+            const screenUI = document.getElementById('screen-ui');
+            const existingModal = document.getElementById('modal-box');
+            if (existingModal) existingModal.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'modal-box';
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="win-window" style="height: 80%;">
+                    <div class="win-window-header">
+                        <span>Visionneuse Windows - ${imageName}</span>
+                        <button class="win-close-btn" onclick="document.getElementById('modal-box').remove()">✕</button>
+                    </div>
+                    <div class="img-view-container">
+                        <img src="${imageName}" alt="${imageName}" onerror="this.onerror=null; this.src='https://via.placeholder.com/600x400?text=${imageName}';">
+                    </div>
+                </div>
+            `;
+            screenUI.appendChild(modal);
+        }
+
+        function openStartMenu() {
+            openNotepad('Système', 'Système d\'exploitation en cours d\'exécution.\nTous les services fonctionnent normalement.');
+        }
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x020307);
+        scene.fog = new THREE.FogExp2(0x020307, 0.02);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(-0.3, 1.6, 3.8);
+        camera.lookAt(0.2, 1.1, 0.2);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0x3a4256, 0.6);
+        scene.add(ambientLight);
+
+        const ceilingLight = new THREE.PointLight(0xfffaed, 1.8, 7);
+        ceilingLight.position.set(0.2, 3.2, 0);
+        ceilingLight.castShadow = true;
+        scene.add(ceilingLight);
+
+        const lampShadeMat = new THREE.MeshStandardMaterial({ color: 0x22252a, roughness: 0.3, metalness: 0.8 });
+        const lampShade = new THREE.Mesh(new THREE.ConeGeometry(0.6, 0.4, 32, 1, true), lampShadeMat);
+        lampShade.position.set(0.2, 3.3, 0);
+        scene.add(lampShade);
+
+        const cableGeo = new THREE.CylinderGeometry(0.01, 0.01, 1.0);
+        const cableMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+        const cable = new THREE.Mesh(cableGeo, cableMat);
+        cable.position.set(0.2, 3.8, 0);
+        scene.add(cable);
+
+        const sideLamp = new THREE.PointLight(0xff9944, 1.2, 4);
+        sideLamp.position.set(-2.2, 1.8, 0.6);
+        scene.add(sideLamp);
+
+        const screenGlow = new THREE.PointLight(0x3c78d8, 2.2, 3.5);
+        screenGlow.position.set(0.2, 1.15, 0.4);
+        scene.add(screenGlow);
+
+        const paperLight = new THREE.PointLight(0xffffff, 2.0, 2.5);
+        paperLight.position.set(-0.4, 1.5, 0.8);
+        scene.add(paperLight);
+
+        const canvasWood = document.createElement('canvas');
+        canvasWood.width = 512; canvasWood.height = 512;
+        const ctxW = canvasWood.getContext('2d');
+        ctxW.fillStyle = '#2b1d14'; ctxW.fillRect(0,0,512,512);
+        ctxW.fillStyle = '#38251a';
+        for(let i=0; i<20; i++) { ctxW.fillRect(0, i*26, 512, 12); }
+        const woodTexture = new THREE.CanvasTexture(canvasWood);
+
+        const roomGroup = new THREE.Group();
+
+        const furnitureMat = new THREE.MeshStandardMaterial({ map: woodTexture, roughness: 0.35, metalness: 0.1 });
+        const tvConsole = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.2, 1.3), furnitureMat);
+        tvConsole.position.set(0.2, 0.5, 0);
+        tvConsole.castShadow = true;
+        tvConsole.receiveShadow = true;
+        roomGroup.add(tvConsole);
+
+        const pcChassisMat = new THREE.MeshStandardMaterial({ color: 0x181a20, roughness: 0.25, metalness: 0.85 });
+        const pcMonitorBody = new THREE.Mesh(new THREE.BoxGeometry(2.3, 1.35, 0.95), pcChassisMat);
+        pcMonitorBody.position.set(0.2, 1.55, 0);
+        pcMonitorBody.castShadow = true;
+        roomGroup.add(pcMonitorBody);
+
+        const bezelMat = new THREE.MeshStandardMaterial({ color: 0x090a0d, roughness: 0.1 });
+        const screenBezel = new THREE.Mesh(new THREE.BoxGeometry(2.08, 1.18, 0.04), bezelMat);
+        screenBezel.position.set(0.2, 1.57, 0.49);
+        roomGroup.add(screenBezel);
+
+        const towerMat = new THREE.MeshStandardMaterial({ color: 0x121418, roughness: 0.3, metalness: 0.7 });
+        const pcTower = new THREE.Mesh(new THREE.BoxGeometry(0.55, 1.1, 1.0), towerMat);
+        pcTower.position.set(1.4, 1.35, 0);
+        pcTower.castShadow = true;
+        roomGroup.add(pcTower);
+
+        const powerLED = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.04, 16), new THREE.MeshBasicMaterial({ color: 0x00ff88 }));
+        powerLED.rotation.x = Math.PI / 2;
+        powerLED.position.set(1.4, 1.75, 0.51);
+        roomGroup.add(powerLED);
+
+        const keyboard = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.05, 0.55), new THREE.MeshStandardMaterial({ color: 0x20242d, roughness: 0.4 }));
+        keyboard.position.set(-0.2, 0.18, 1.0);
+        keyboard.rotation.x = -0.04;
+        keyboard.castShadow = true;
+        roomGroup.add(keyboard);
+
+        const coffeeTable = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.4, 1.0), furnitureMat);
+        coffeeTable.position.set(-1.5, 0.2, 1.2);
+        coffeeTable.castShadow = true;
+        roomGroup.add(coffeeTable);
+
+        const canvasPaper = document.createElement('canvas');
+        canvasPaper.width = 1024; canvasPaper.height = 512;
+        const ctxP = canvasPaper.getContext('2d');
+        ctxP.fillStyle = '#fdfbf7';
+        ctxP.fillRect(0, 0, 1024, 512);
+        
+        ctxP.fillStyle = '#101820';
+        ctxP.font = 'bold 55px "Times New Roman", Times, serif';
+        ctxP.textAlign = 'center';
+        ctxP.textBaseline = 'middle';
+        ctxP.fillText("⋉+⟟+⌿+⌖+⎐+⋏+⊑", 512, 256);
+
+        const paperTexture = new THREE.CanvasTexture(canvasPaper);
+        const paperMat = new THREE.MeshStandardMaterial({ map: paperTexture, roughness: 0.85, side: THREE.DoubleSide });
+        
+        const paperMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.7), paperMat);
+        paperMesh.position.set(-0.35, 0.65, 1.45);
+        paperMesh.rotation.x = -Math.PI / 2 + 0.25;
+        paperMesh.rotation.z = 0.05;
+        paperMesh.castShadow = true;
+        paperMesh.receiveShadow = true;
+        paperMesh.userData = { isPaper: true };
+        roomGroup.add(paperMesh);
+
+        scene.add(roomGroup);
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        window.addEventListener('click', (event) => {
+            if (event.target.closest('#screen-ui')) return;
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children, true);
+
+            for (let i = 0; i < intersects.length; i++) {
+                if (intersects[i].object.userData && intersects[i].object.userData.isPaper) {
+                    showNotification("Feuille examinée : Les symboles indiquent l'ordre de la combinaison clavier...");
+                    break;
+                }
+            }
+        });
+
+        function updateScreenPosition() {
+            const screenUI = document.getElementById('screen-ui');
+            
+            const topLeft3D = new THREE.Vector3(-0.72, 2.12, 0.51);
+            const bottomRight3D = new THREE.Vector3(1.12, 1.02, 0.51);
+
+            topLeft3D.project(camera);
+            bottomRight3D.project(camera);
+
+            const wHalf = window.innerWidth / 2;
+            const hHalf = window.innerHeight / 2;
+
+            const x1 = (topLeft3D.x * wHalf) + wHalf;
+            const y1 = -(topLeft3D.y * hHalf) + hHalf;
+            const x2 = (bottomRight3D.x * wHalf) + wHalf;
+            const y2 = -(bottomRight3D.y * hHalf) + hHalf;
+
+            screenUI.style.left = `${x1}px`;
+            screenUI.style.top = `${y1}px`;
+            screenUI.style.width = `${x2 - x1}px`;
+            screenUI.style.height = `${y2 - y1}px`;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+            updateScreenPosition();
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        renderDesktop();
+        animate();
+    </script>
+</body>
+</html>
