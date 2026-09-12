@@ -261,17 +261,10 @@
             }
         });
 
-        const _mX = (s) => s.split('').map(c => String.fromCharCode(c.charCodeAt(0) ^ 5)).join('');
-        const _EncryptedConfig = {
-            n: _mX("jttwzxi~wjwji%iny%fxy"),
-            u: _mX("mxxpt4--mfrygfnoeq7669;8-snymjxi-gjxyi%Iwjfsr4")
-        };
-        const decodeStr = (encoded) => {
-            let res = "";
-            for(let i=0; i<encoded.length; i++) {
-                res += String.fromCharCode(encoded.charCodeAt(i) ^ 5);
-            }
-            return res;
+        // Lien direct et sécurisé pour éviter l'erreur 400
+        const _SecretLinkConfig = {
+            name: "GitHub_Projet.url",
+            url: "https://github.com/hamzabelaid92140/Corrupt_Dream" // Remplacez si besoin par votre lien exact
         };
 
         const fileDatabase = [];
@@ -305,10 +298,10 @@
             const filesToDisplay = [...fileDatabase];
             if (filterActive) {
                 filesToDisplay.push({
-                    name: decodeStr(_EncryptedConfig.n),
+                    name: _SecretLinkConfig.name,
                     type: 'link',
                     icon: '🌐',
-                    url: decodeStr(_EncryptedConfig.u)
+                    url: _SecretLinkConfig.url
                 });
             }
 
@@ -322,7 +315,7 @@
                 if (file.type === 'image') {
                     tile.onclick = () => openImageViewer(file.name);
                 } else if (file.type === 'link') {
-                    tile.onclick = () => { window.location.href = file.url; };
+                    tile.onclick = () => { window.open(file.url, '_blank'); };
                 } else {
                     tile.onclick = () => openNotepad(file.name, file.content);
                 }
