@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>PC Salon 3D - Setup Immersif</title>
     <style>
         body {
@@ -11,7 +11,57 @@
             background-color: #020205;
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
             user-select: none;
+            touch-action: none;
             cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewport="0 0 24 24" style="fill:black;stroke:white;stroke-width:1px;"><circle cx="12" cy="12" r="6" fill="%2300ff88"/><line x1="12" y1="2" x2="12" y2="22" stroke="white" stroke-width="2"/><line x1="2" y1="12" x2="22" y2="12" stroke="white" stroke-width="2"/></svg>') 12 12, auto;
+        }
+
+        #blocker-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(5, 5, 10, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            backdrop-filter: blur(10px);
+        }
+
+        .switch-menu {
+            display: flex;
+            gap: 20px;
+        }
+
+        .switch-btn {
+            width: 50px;
+            height: 90px;
+            background: #1a1a24;
+            border: 2px solid #333545;
+            border-radius: 8px;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 8px;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), 0 5px 15px rgba(0,0,0,0.5);
+        }
+
+        .switch-btn::before {
+            content: '';
+            width: 36px;
+            height: 48px;
+            background: linear-gradient(to bottom, #d9534f, #c9302c);
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(0);
+        }
+
+        .switch-btn.on::before {
+            background: linear-gradient(to bottom, #5cb85c, #449d44);
+            transform: translateY(-24px);
+            box-shadow: 0 -4px 8px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.4);
         }
 
         #bottom-notification {
@@ -234,11 +284,22 @@
 </head>
 <body>
 
-    <audio id="bg-audio" src="Bad Piggies Theme.mp3" loop autoplay></audio>
+    <!-- Bloqueur / Menu 5 boutons OFF -->
+    <div id="blocker-overlay">
+        <div class="switch-menu" id="switch-menu">
+            <div class="switch-btn" data-index="0"></div>
+            <div class="switch-btn" data-index="1"></div>
+            <div class="switch-btn" data-index="2"></div>
+            <div class="switch-btn" data-index="3"></div>
+            <div class="switch-btn" data-index="4"></div>
+        </div>
+    </div>
 
-    <div id="bottom-notification">Indice : Utilisez la combinaison secrète sur le clavier...</div>
+    <audio id="bg-audio" src="Bad Piggies Theme.mp3" loop></audio>
 
-    <div id="screen-ui">
+    <div id="bottom-notification">Indice : Utilisez la combinaison secrète sur le clavier... [cite: 12]</div>
+
+    <div id="screen-ui" style="pointer-events: none;">
         <div class="win-desktop" id="desktop-grid"></div>
         <div class="win-taskbar">
             <div class="start-orb" onclick="openStartMenu()">⊞</div>
@@ -251,25 +312,58 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
+        // Anti-zoom et anti-gesture mobile/desktop
+        document.addEventListener('wheel', e => e.preventDefault(), { passive: false });
+        document.addEventListener('gesturestart', e => e.preventDefault());
+        document.addEventListener('gesturechange', e => e.preventDefault());
+        document.addEventListener('gestureend', e => e.preventDefault());
+        document.addEventListener('touchmove', e => { if (e.scale !== 1) e.preventDefault(); }, { passive: false });
+
+        // Anti-inspect / code source
         document.addEventListener('contextmenu', event => event.preventDefault());
         document.addEventListener('keydown', event => {
             if (
                 event.key === 'F12' ||
                 (event.ctrlKey && event.shiftKey && (event.key === 'I' || event.key === 'C' || event.key === 'J')) ||
-                (event.ctrlKey && event.key === 'U')
+                (event.ctrlKey && event.key === 'U') ||
+                (event.metaKey && event.altKey && (event.key === 'I' || event.key === 'U'))
             ) {
                 event.preventDefault();
                 return false;
             }
         });
 
-        // Déverrouillage audio au premier clic utilisateur (politique autoplay navigateur)
-        window.addEventListener('click', () => {
-            const audio = document.getElementById('bg-audio');
-            if (audio && audio.paused) {
-                audio.play().catch(e => {});
-            }
-        }, { once: true });
+        // Gestion du menu à 5 interrupteurs OFF
+        let switchesState = [false, false, false, false, false];
+        const switchElements = document.querySelectorAll('.switch-btn');
+        const blockerOverlay = document.getElementById('blocker-overlay');
+        const screenUI = document.getElementById('screen-ui');
+        let gameUnlocked = false;
+
+        switchElements.forEach((btn, idx) => {
+            btn.addEventListener('click', () => {
+                if (gameUnlocked) return;
+                switchesState[idx] = !switchesState[idx];
+                if (switchesState[idx]) {
+                    btn.classList.add('on');
+                } else {
+                    btn.classList.remove('on');
+                }
+
+                // Vérifier si tous sur ON
+                if (switchesState.every(s => s === true)) {
+                    gameUnlocked = true;
+                    blockerOverlay.style.transition = 'opacity 0.5s ease';
+                    blockerOverlay.style.opacity = '0';
+                    setTimeout(() => {
+                        blockerOverlay.style.display = 'none';
+                        screenUI.style.pointerEvents = 'auto';
+                        const audio = document.getElementById('bg-audio');
+                        if (audio) audio.play().catch(e => {});
+                    }, 500);
+                }
+            });
+        });
 
         const _SecretLinkConfig = {
             name: "Mon_Site.url",
@@ -344,6 +438,7 @@
         const targetKeys = ['z', 'i', 'p', 'x', 'v', 'n', 'h'];
 
         window.addEventListener('keydown', (e) => {
+            if (!gameUnlocked) return;
             const key = e.key.toLowerCase();
             activeKeys[key] = true;
 
@@ -540,6 +635,7 @@
         const mouse = new THREE.Vector2();
 
         window.addEventListener('click', (event) => {
+            if (!gameUnlocked) return;
             if (event.target.closest('#screen-ui')) return;
 
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
