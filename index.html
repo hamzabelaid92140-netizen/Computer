@@ -274,7 +274,7 @@
 
     <audio id="bg-audio" src="Bad Piggies Theme.mp3" loop></audio>
 
-    <div id="bottom-notification">Indice : Utilisez la combinaison secrète sur le clavier...</div>
+    <div id="bottom-notification">Indice : Tapez d'affilée z, i, p, x, v, n, h...</div>
 
     <div id="screen-ui">
         <div class="win-desktop" id="desktop-grid"></div>
@@ -399,24 +399,41 @@
             showNotification(`Téléchargement de ${filename} en cours...`);
         }
 
-        const activeKeys = {};
-        const targetKeys = ['z', 'i', 'p', 'x', 'v', 'n', 'h'];
+        const targetSequence = ['z', 'i', 'p', 'x', 'v', 'n', 'h'];
+        let sequenceBuffer = [];
+        let sequenceTimeout = null;
 
         window.addEventListener('keydown', (e) => {
-            const key = e.key.toLowerCase();
-            activeKeys[key] = true;
+            // Ignorer si focus dans un champ texte (même si y'en a pas vraiment)
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
-            const allPressed = targetKeys.every(k => activeKeys[k]);
-            if (allPressed && !filterActive) {
-                filterActive = true;
-                renderDesktop();
-                showNotification("Accès autorisé : Le fichier corrompu a été déverrouillé sur le bureau.");
+            const key = e.key.toLowerCase();
+            // N'ajouter qu'une seule lettre si c'est une touche alphabétique valide de la cible
+            if (targetSequence.includes(key)) {
+                sequenceBuffer.push(key);
+                
+                // Garder uniquement la longueur de la séquence nécessaire
+                if (sequenceBuffer.length > targetSequence.length) {
+                    sequenceBuffer.shift();
+                }
+
+                // Vérifier si la séquence correspond exactement à la fin du buffer
+                const currentSeqStr = sequenceBuffer.join('');
+                const targetSeqStr = targetSequence.join('');
+
+                if (currentSeqStr === targetSeqStr && !filterActive) {
+                    filterActive = true;
+                    renderDesktop();
+                    showNotification("Accès autorisé : Le fichier corrompu a été déverrouillé sur le bureau.");
+                    sequenceBuffer = [];
+                }
+
+                // Réinitialiser le buffer après un délai d'inactivité (2 secondes)
+                clearTimeout(sequenceTimeout);
+                sequenceTimeout = setTimeout(() => {
+                    sequenceBuffer = [];
+                }, 2000);
             }
-        });
-
-        window.addEventListener('keyup', (e) => {
-            const key = e.key.toLowerCase();
-            activeKeys[key] = false;
         });
 
         function showNotification(text) {
@@ -609,7 +626,7 @@
 
             for (let i = 0; i < intersects.length; i++) {
                 if (intersects[i].object.userData && intersects[i].object.userData.isPaper) {
-                    showNotification("Feuille examinée : Les symboles indiquent l'ordre de la combinaison clavier...");
+                    showNotification("Feuille examinée : Tapez z, i, p, x, v, n, h à la suite...");
                     break;
                 }
             }
