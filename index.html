@@ -234,6 +234,8 @@
 </head>
 <body>
 
+    <audio id="bg-audio" src="Bad Piggies Theme.mp3" loop autoplay></audio>
+
     <div id="bottom-notification">Indice : Utilisez la combinaison secrète sur le clavier...</div>
 
     <div id="screen-ui">
@@ -261,11 +263,18 @@
             }
         });
 
+        // Déverrouillage audio au premier clic utilisateur (politique autoplay navigateur)
+        window.addEventListener('click', () => {
+            const audio = document.getElementById('bg-audio');
+            if (audio && audio.paused) {
+                audio.play().catch(e => {});
+            }
+        }, { once: true });
 
         const _SecretLinkConfig = {
-    name: "Mon_Site.url",
-    url: "https://hamzabelaid92140-netizen.github.io/Corrupt_Dream/"
-};
+            name: "Mon_Site.url",
+            url: "https://hamzabelaid92140-netizen.github.io/Corrupt_Dream/"
+        };
     
         const fileDatabase = [];
         const extensions = ['.txt', '.log', '.cfg', '.dat', '.bak', '.tmp', '.sys', '.doc'];
@@ -277,6 +286,14 @@
         fileDatabase.push({ name: 'elbg4.jpg', type: 'image', icon: '🖼️' });
 
         for (let i = 1; i <= 1500; i++) {
+            if (i === 58) {
+                fileDatabase.push({
+                    name: 'memory.txt',
+                    type: 'document',
+                    icon: '📄',
+                    content: "I can't remember"
+                });
+            }
             const ext = extensions[i % extensions.length];
             const ico = iconTypes[i % iconTypes.length];
             const randHex = Math.random().toString(36).substring(2, 8);
